@@ -40,6 +40,7 @@ class Track(StructuredNode):
     album = StringProperty(required=True)
     year = IntegerProperty(default=0)
     position = IntegerProperty(default=0)
+    duration = IntegerProperty(default=0)
     original_artist = StringProperty()
 
     # Undirected Relationships
@@ -49,3 +50,16 @@ class Track(StructuredNode):
     keyword_in_title = Relationship('KeywordInTitle', 'KEYWORD_IN_TITLE')
     same_track_number = Relationship('SameTrackNumber', 'SAME_NUMBER')
     same_year = Relationship('SameYear', 'SAME_YEAR')
+
+    @property
+    def serialize(self):
+        return {
+            'uuid': self.uuid,
+            'title': self.title,
+            'artist': self.artist,
+            'album': self.album,
+            'year': self.year,
+            'position': self.position,
+            'duration': self.duration,
+            'original_artist': self.original_artist,
+        }
