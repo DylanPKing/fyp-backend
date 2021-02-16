@@ -40,6 +40,7 @@ class Track(StructuredNode):
     album = StringProperty(required=True)
     year = IntegerProperty(default=0)
     position = IntegerProperty(default=0)
+    duration = IntegerProperty(default=0)
     original_artist = StringProperty()
 
     # Undirected Relationships
@@ -59,5 +60,6 @@ class Track(StructuredNode):
             'album': self.album,
             'year': self.year,
             'position': self.position,
+            'duration': self.duration,
             'original_artist': self.original_artist,
         }
