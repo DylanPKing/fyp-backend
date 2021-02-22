@@ -44,5 +44,6 @@ if __name__ == '__main__':
         print('Starting linking now.')
         for track in tracks:
             track.same_original_artist.connect(link_node)
+            link_node.same_original_artist.connect(track)
 
         print(f'Finished bucket {original_artist}')
