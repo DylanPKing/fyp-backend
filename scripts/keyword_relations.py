@@ -61,5 +61,6 @@ if __name__ == '__main__':
         print('Starting linking now')
         for track in tracks:
             track.keyword_in_title.connect(link_node)
+            link_node.keyword_in_title.connect(track)
 
         print(f'Completed bucket {keyword}')

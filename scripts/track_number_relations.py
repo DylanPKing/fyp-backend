@@ -41,5 +41,6 @@ if __name__ == '__main__':
 
         for track in tracks:
             track.same_track_number.connect(link_node)
+            link_node.same_track_number.connect(track)
 
         print(f'Finished bucket {number}')
