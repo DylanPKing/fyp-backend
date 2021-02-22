@@ -1,8 +1,10 @@
+from neomodel.core import StructuredNode
+
 from rest_framework import viewsets
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from autodjbackend import models
+from autodjbackend import models, playlist_generator
 
 
 VALID_CRITERIA = [
@@ -18,6 +20,8 @@ CRITERA_TO_NODE_MODEL = {
     'original_artist': models.SameOriginalArtist,
     'keyword_in_title': models.KeywordInTitle,
 }
+
+MINUTES_TO_MILLISECONDS = 60000
 
 
 class CreatePlaylistViewSet(viewsets.ViewSet):
@@ -70,33 +74,47 @@ class CreatePlaylistViewSet(viewsets.ViewSet):
                     --data '{"criteria":{"original_artist":"Bob Dylan"},"total_duration":3600}' \
                     /api/generate/
         """
-        # TODO: Pull track attrs from request.data
-        # MATCH DB for relevant link nodes
-        # Traverse graph using total_duration from request as limit.
-        # Compile final traversal into a list to JSONify and return.
-        # Add doc comment with correct HTTP syntax.
-        total_duration = request.data['total_duration']
-        track_criteria = request.data['track_criteria']
+        total_duration = (
+            request.data['total_duration'] * MINUTES_TO_MILLISECONDS
+        )
 
-        criteria_to_search = self._get_criteria_to_search(track_criteria)
+        criteria_to_search: dict() = self._get_criteria_to_search(
+            request.data['track_criteria']
+        )
 
-        link_nodes = self._get_link_nodes_from_criteria(criteria_to_search)
+        link_nodes: list(StructuredNode) = self._get_link_nodes_from_criteria(
+            criteria_to_search
+        )
 
-        return Response('Hello there')
+        playlist: list(models.Track) = playlist_generator.generate(
+            link_nodes, total_duration
+        )
+
+        resp_data = {
+            'tracks': [],
+            'total_duration': 0,
+        }
+        for track in playlist:
+            resp_data['tracks'].append(track.serialize)
+            resp_data['total_duration'] += track.duration
+
+        return Response(resp_data)
 
     def _get_criteria_to_search(self, track_criteria: dict) -> dict:
         criteria_to_search = {}
         for criteria in VALID_CRITERIA:
-            if criteria in track_criteria.keys():
+            try:
                 criteria_to_search[criteria] = track_criteria[criteria]
+            except KeyError:
+                pass
 
         return criteria_to_search
 
-    def _get_link_nodes_from_criteria(criteria_to_search: dict) -> list:
+    def _get_link_nodes_from_criteria(self, criteria_to_search: dict) -> list:
         link_nodes = []
         for key, value in criteria_to_search.items():
             link_node_class = CRITERA_TO_NODE_MODEL[key]
             params = {key: value}
-            link_nodes.append(link_node_class(**params))
+            link_nodes.extend(link_node_class.nodes.filter(**params))
 
         return link_nodes
