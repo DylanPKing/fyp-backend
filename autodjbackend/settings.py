@@ -163,7 +163,7 @@ LOGGING = {
         'file': {
             'level': 'WARNING',
             'class': 'logging.FileHandler',
-            'filename': '/code/output.log',
+            'filename': '../output.log',
             'formatter': 'verbose'
         },
         'console': {
