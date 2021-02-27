@@ -59,7 +59,7 @@ class CreatePlaylistViewSet(ViewSet):
 
             Sample Call:
                 curl -X POST -H "Content-Type: application/json" \
-                    --data '{"criteria":{"original_artist":"Bob Dylan"},"total_duration":3600}' \
+                    --data '{"criteria":{"original_artist":"Bob Dylan"},"total_duration":3600}' \  # noqa: E501, W605
                     /api/generate/
         """
 

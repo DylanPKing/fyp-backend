@@ -29,7 +29,7 @@ def should_convert(track_params):
     )
 
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
     imported_data = []
 
     print('Starting file-read.')
