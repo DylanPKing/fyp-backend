@@ -1,5 +1,7 @@
 import unittest
 
+from unittest import mock
+
 from autodjbackend import models, utils
 
 
@@ -35,12 +37,14 @@ class TestUtils(unittest.TestCase):
         self.assertDictEqual(expected_output, actual_output)
 
     def test_get_link_nodes_from_criteria(self):
-        expected_output = list(
-            models.SameTrackNumber.nodes.filter(track_number=1)
-        )
-
         criteria = {'track_number': 1}
 
-        actual_output = utils.get_link_nodes_from_criteria(criteria)
+        expected_output = [models.SameTrackNumber(**criteria)]
+
+        with mock.patch.object(
+            utils.CRITERA_TO_NODE_MODEL['track_number'], 'filter',
+            return_value=expected_output[0]
+        ):
+            actual_output = utils.get_link_nodes_from_criteria(criteria)
 
         self.assertEqual(expected_output, actual_output)
