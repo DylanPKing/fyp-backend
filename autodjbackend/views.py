@@ -1,32 +1,20 @@
-from neomodel.core import StructuredNode
+import logging
 
-from rest_framework import viewsets
-from rest_framework.request import Request
+from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
+from rest_framework.exceptions import ParseError
 
-from autodjbackend import models, playlist_generator
+from autodjbackend import playlist_generator, utils
 
 
-VALID_CRITERIA = [
-    'track_number',
-    'year',
-    'original_artist',
-    'keyword_in_title',
-]
-
-CRITERA_TO_NODE_MODEL = {
-    'track_number': models.SameTrackNumber,
-    'year': models.SameYear,
-    'original_artist': models.SameOriginalArtist,
-    'keyword_in_title': models.KeywordInTitle,
-}
+logger = logging.getLogger(__name__)
 
 MINUTES_TO_MILLISECONDS = 60000
 
 
-class CreatePlaylistViewSet(viewsets.ViewSet):
+class CreatePlaylistViewSet(ViewSet):
 
-    def create(self, request: Request) -> Response:
+    def create(self, request):
         """
         Generates a new playlist based on request criteria.
 
@@ -66,7 +54,7 @@ class CreatePlaylistViewSet(viewsets.ViewSet):
                 Code: 422 Unprocessable Entry
                 Content:
                     {
-                        error : "Unable to generate playlist from criteria"
+                        msg : "Unable to generate playlist from criteria"
                     }
 
             Sample Call:
@@ -74,47 +62,33 @@ class CreatePlaylistViewSet(viewsets.ViewSet):
                     --data '{"criteria":{"original_artist":"Bob Dylan"},"total_duration":3600}' \
                     /api/generate/
         """
-        total_duration = (
-            request.data['total_duration'] * MINUTES_TO_MILLISECONDS
-        )
 
-        criteria_to_search: dict() = self._get_criteria_to_search(
-            request.data['track_criteria']
-        )
+        request_data = request.data
 
-        link_nodes: list(StructuredNode) = self._get_link_nodes_from_criteria(
-            criteria_to_search
-        )
+        try:
+            total_duration = (
+                request_data['total_duration'] * MINUTES_TO_MILLISECONDS
+            )
 
-        playlist: list(models.Track) = playlist_generator.generate(
-            link_nodes, total_duration
-        )
+            criteria_to_search = utils.get_criteria_to_search(
+                request_data['track_criteria']
+            )
+        except KeyError as err:
+            err_string = f'Request missing data: {err}'
+            logger.info(err_string)
+            raise ParseError(detail=err_string)
+
+        link_nodes = utils.get_link_nodes_from_criteria(criteria_to_search)
+
+        playlist = playlist_generator.generate(link_nodes, total_duration)
 
         resp_data = {
             'tracks': [],
             'total_duration': 0,
         }
+
         for track in playlist:
             resp_data['tracks'].append(track.serialize)
             resp_data['total_duration'] += track.duration
 
         return Response(resp_data)
-
-    def _get_criteria_to_search(self, track_criteria: dict) -> dict:
-        criteria_to_search = {}
-        for criteria in VALID_CRITERIA:
-            try:
-                criteria_to_search[criteria] = track_criteria[criteria]
-            except KeyError:
-                pass
-
-        return criteria_to_search
-
-    def _get_link_nodes_from_criteria(self, criteria_to_search: dict) -> list:
-        link_nodes = []
-        for key, value in criteria_to_search.items():
-            link_node_class = CRITERA_TO_NODE_MODEL[key]
-            params = {key: value}
-            link_nodes.extend(link_node_class.nodes.filter(**params))
-
-        return link_nodes
