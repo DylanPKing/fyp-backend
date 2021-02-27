@@ -13,10 +13,10 @@ VALID_CRITERIA = [
 ]
 
 CRITERA_TO_NODE_MODEL = {
-    'track_number': models.SameTrackNumber,
-    'year': models.SameYear,
-    'original_artist': models.SameOriginalArtist,
-    'keyword_in_title': models.KeywordInTitle,
+    'track_number': models.SameTrackNumber.nodes,
+    'year': models.SameYear.nodes,
+    'original_artist': models.SameOriginalArtist.nodes,
+    'keyword_in_title': models.KeywordInTitle.nodes,
 }
 
 
@@ -36,6 +36,7 @@ def get_link_nodes_from_criteria(criteria_to_search):
     for key, value in criteria_to_search.items():
         link_node_class = CRITERA_TO_NODE_MODEL[key]
         params = {key: value}
-        link_nodes.extend(link_node_class.nodes.filter(**params))
+        link_node = link_node_class.filter(**params)
+        link_nodes.append(link_node)
 
     return link_nodes
