@@ -3,33 +3,7 @@ import os
 import neomodel
 
 from autodjbackend.models import Track, KeywordInTitle
-
-
-KEYWORDS = [
-    'river',
-    'love',
-    'blues',
-    'party',
-    'time',
-    'tonight',
-    'rain',
-    'morning',
-    'breathe',
-    'fire',
-    'woman',
-    'disco',
-    'rock',
-    'music',
-    'dancin',
-    'baby',
-    'twist',
-    'lonely',
-    'stop',
-    'boogie',
-    'christmas',
-    'moon',
-]
-
+from autodjbackend.playlist_generator import KEYWORDS
 
 if __name__ == '__main__':
     bolt_url = os.environ.get(

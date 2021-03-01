@@ -31,12 +31,5 @@ def get_criteria_to_search(track_criteria):
     return criteria_to_search
 
 
-def get_link_nodes_from_criteria(criteria_to_search):
-    link_nodes = []
-    for key, value in criteria_to_search.items():
-        link_node_class = CRITERA_TO_NODE_MODEL[key]
-        params = {key: value}
-        link_node = link_node_class.filter(**params)
-        link_nodes.append(link_node)
-
-    return link_nodes
+def get_seed_nodes_from_criteria(criteria_to_search):
+    return models.Track.nodes.filter(**criteria_to_search).all()

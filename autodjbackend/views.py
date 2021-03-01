@@ -36,7 +36,7 @@ class CreatePlaylistViewSet(ViewSet):
             Data:
                 {
                     track_criteria : {
-                        track_number : [integer],
+                        position : [integer],
                         year : [integer],
                         original_artist : [string],
                         keyword_in_title : [string]
@@ -78,17 +78,10 @@ class CreatePlaylistViewSet(ViewSet):
             logger.info(err_string)
             raise ParseError(detail=err_string)
 
-        link_nodes = utils.get_link_nodes_from_criteria(criteria_to_search)
+        seed_nodes = utils.get_seed_nodes_from_criteria(criteria_to_search)
 
-        playlist = playlist_generator.generate(link_nodes, total_duration)
-
-        resp_data = {
-            'tracks': [],
-            'total_duration': 0,
-        }
-
-        for track in playlist:
-            resp_data['tracks'].append(track.serialize)
-            resp_data['total_duration'] += track.duration
+        resp_data = playlist_generator.generate(
+            seed_nodes, criteria_to_search, total_duration
+        )
 
         return Response(resp_data)
