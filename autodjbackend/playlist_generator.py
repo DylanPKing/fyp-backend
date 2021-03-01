@@ -121,17 +121,45 @@ def _calculate_heuristic_value(
 ):
     h_value = 0
 
-    for key, value in criteria.items():
-        if getattr(track, key) == value:
-            h_value += 10
+    h_value += _matches_user_criteria(criteria, track)
+    h_value += _original_performance(criteria, track)
+    h_value += _matches_current_track(current_track, track)
+    h_value += _contains_keywords(current_track, track)
 
-    if (
-        'original_artist' in criteria.keys() and
-        track.artist == track.original_artist
-    ):
-        h_value -= 5
+    if track in playlist:
+        h_value = 0
 
-    # +5 for attributes which directly match current track
+    h_value = _check_remaining_time(track, total_duration, current_total)
+
+    return h_value
+
+
+def _check_remaining_time(track, total_duration, current_total):
+    h_value = 0
+
+    time_remaining = total_duration - current_total
+    if time_remaining < THREE_MINUTES_IN_MILLISECONDS:
+        tmp_total = current_total + track.duration
+        distance_from_zero = abs(total_duration - tmp_total)
+        if distance_from_zero < THREE_MINUTES_IN_MILLISECONDS:
+            h_value += 5
+
+    return h_value
+
+
+def _contains_keywords(current_track, track):
+    h_value = 0
+
+    for keyword in KEYWORDS:
+        if keyword in track.title and keyword in current_track.title:
+            h_value += 5
+
+    return h_value
+
+
+def _matches_current_track(current_track, track):
+    h_value = 0
+
     if track.position == current_track.position:
         h_value += 5
     if track.original_artist == current_track.original_artist:
@@ -139,21 +167,26 @@ def _calculate_heuristic_value(
     if track.year == current_track.year:
         h_value += 5
 
-    for keyword in KEYWORDS:
-        if keyword in track.title and keyword in current_track.title:
-            h_value += 5
+    return h_value
 
-    if track in playlist:
-        h_value = 0
 
-    # Check if time check is needed
-    time_remaining = total_duration - current_total
+def _original_performance(criteria, track):
+    h_value = 0
 
-    if time_remaining < THREE_MINUTES_IN_MILLISECONDS:
-        tmp_total = current_total + track.duration
-        distance_from_zero = abs(total_duration - tmp_total)
-        if distance_from_zero < THREE_MINUTES_IN_MILLISECONDS:
-            h_value += 5
+    if (
+        'original_artist' in criteria.keys() and
+        track.artist == track.original_artist
+    ):
+        h_value += 5
+
+    return h_value
+
+
+def _matches_user_criteria(criteria, track):
+    h_value = 0
+    for key, value in criteria.items():
+        if getattr(track, key) == value:
+            h_value += 10
 
     return h_value
 
