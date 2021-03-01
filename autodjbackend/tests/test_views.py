@@ -54,7 +54,7 @@ class TestCreatePlayListViewSet(unittest.TestCase):
             ) as mocked_get_link_nodes:
                 with patch(
                     'autodjbackend.playlist_generator.generate',
-                    return_value=expected_tracks
+                    return_value=expected_output
                 ) as mocked_generate:
                     response = self.view_set.create(request)
 
