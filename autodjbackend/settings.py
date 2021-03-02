@@ -155,7 +155,7 @@ LOGGING = {
             'style': '{',
         },
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
     },
@@ -175,8 +175,12 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['file', 'console'],
-            'level': 'WARNING',
-            'propagate': True,
+            'level': 'INFO',
+            'propagate': False,
         },
+    },
+    'root': {
+        'handlers': ['file', 'console'],
+        'level': 'INFO',
     },
 }

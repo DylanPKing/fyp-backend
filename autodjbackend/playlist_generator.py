@@ -1,7 +1,10 @@
 import logging
 import random
 
-from autodjbackend import models
+from autodjbackend.models import Track
+from autodjbackend.utils import (
+    minutes_to_milliseconds, milliseconds_to_minutes
+)
 
 
 logger = logging.getLogger(__name__)
@@ -39,32 +42,60 @@ ATTR_TO_REL = {
     'keyword_in_title': 'keyword_in_title',
 }
 
-THREE_MINUTES_IN_MILLISECONDS = 180000
-THIRTY_SECONDS_IN_MILLISCEONDS = 30000
-
 
 def generate(seed_nodes, criteria, total_duration):
+    """
+    Generates a playlist using user criteria, and the given seed nodes.
+
+    This is the main function for generating playlists. It picks one of the
+    seed nodes at random to start with, as they all have the same heuristic
+    value.
+
+    The main loop of this function traverses the graph to get all of the link
+    nodes for the current track, and then retrieves all of the tracks related
+    to these link nodes. This emulates retreiving all of the related nodes from
+    a graph where the tracks are directly connected.
+
+    Next, each potential track is assigned a heuristic value. THey are then
+    bucketed according to their heurstic value. The algorithm then picks one of
+    the highest scoring tracks at random, and adds that to the playlist.
+
+    This process repeats until the runtime of the playlist is at least 30
+    seconds less than the user-specified runtime.
+
+    Args:
+        seed_nodes (list(Track)): A list of tracks that meets user criteria
+        criteria (dict()): The users criteria, used by the heuritsic function
+        total_duration (int): User-specified runtime in milliseconds.
+
+    Returns:
+        dict(): A dict containing serialized tracks, and the total runtime
+            in minutes.
+    """
     heuristic_dict = {}
     current_track = random.choice(seed_nodes)
     current_total = current_track.duration
     playlist = [current_track]
+    logger.info(
+        f'Starting track: {current_track.artist}: {current_track.title}'
+    )
     time_left = True
     while time_left:
         # Clear existing heuristic values
         heuristic_dict.clear()
 
         # Get link nodes which connect to all related tracks.
-        link_nodes = _get_link_nodes(current_track)
-
-        # Get tracks related to these link nodes
-        related_tracks = _get_related_tracks_from_link_nodes(link_nodes)
+        logger.info('Getting related tracks.')
+        related_tracks = _get_related_tracks(current_track)
 
         # Main loop
+        logger.info('Calculating heuristic values.')
         for track in related_tracks:
-            heuristic_dict[track.uuid] = _calculate_heuristic_value(
-                criteria, current_track, playlist,
-                track, total_duration, current_total
-            )
+            if not _h_value_exists(heuristic_dict, track.uuid):
+                heuristic_dict[track.uuid] = _calculate_heuristic_value(
+                    criteria, current_track, playlist,
+                    track, total_duration, current_total
+                )
 
         # Bucket tracks accoriding to H-Value
         h_buckets = _bucket_tracks_by_h_value(heuristic_dict)
@@ -74,22 +105,35 @@ def generate(seed_nodes, criteria, total_duration):
         playlist.append(next_track)
         current_total += next_track.duration
 
+        logger.info(f'Next track: {next_track.artist}: {next_track.title}')
+        logger.info(f'Current track count: {len(playlist)}')
+        logger.info(
+            f'Current runtime: {milliseconds_to_minutes(current_total)}'
+        )
+
         time_left = _is_time_remaining(total_duration, current_total)
 
-    playlist = [track.serialize for track in playlist]
-
     response = {
-        'tracks': playlist,
-        'total_duration': current_total
+        'tracks': [track.serialize for track in playlist],
+        'total_duration': milliseconds_to_minutes(current_total)
     }
 
     return response
 
 
+def _h_value_exists(heurstic_dict, uuid):
+    try:
+        heurstic_dict[uuid] 
+    except KeyError:
+        return False
+    else:
+        return True
+
+
 def _is_time_remaining(total_duration, current_total):
     time_left = True
     time_remaining = total_duration - current_total
-    if time_remaining < THIRTY_SECONDS_IN_MILLISCEONDS:
+    if time_remaining < minutes_to_milliseconds(0.5):
         time_left = False
 
     return time_left
@@ -100,7 +144,7 @@ def _get_next_track(h_buckets):
 
     # Pick next track randomly from those with best H-Value
     next_track_uuid = random.choice(h_buckets[best_h_value])
-    next_track = models.Track.nodes.get(uuid=next_track_uuid)
+    next_track = Track.nodes.get(uuid=next_track_uuid)
     return next_track
 
 
@@ -121,15 +165,12 @@ def _calculate_heuristic_value(
 ):
     h_value = 0
 
-    h_value += _matches_user_criteria(criteria, track)
-    h_value += _original_performance(criteria, track)
-    h_value += _matches_current_track(current_track, track)
-    h_value += _contains_keywords(current_track, track)
-
-    if track in playlist:
-        h_value = 0
-
-    h_value = _check_remaining_time(track, total_duration, current_total)
+    if track not in playlist:
+        h_value += _matches_user_criteria(criteria, track)
+        h_value += _original_performance(criteria, track)
+        h_value += _matches_current_track(current_track, track)
+        h_value += _contains_keywords(current_track, track)
+        h_value += _check_remaining_time(track, total_duration, current_total)
 
     return h_value
 
@@ -137,11 +178,13 @@ def _calculate_heuristic_value(
 def _check_remaining_time(track, total_duration, current_total):
     h_value = 0
 
+    three_minutes_in_milliseconds = minutes_to_milliseconds(3)
+
     time_remaining = total_duration - current_total
-    if time_remaining < THREE_MINUTES_IN_MILLISECONDS:
+    if time_remaining < three_minutes_in_milliseconds:
         tmp_total = current_total + track.duration
         distance_from_zero = abs(total_duration - tmp_total)
-        if distance_from_zero < THREE_MINUTES_IN_MILLISECONDS:
+        if distance_from_zero < three_minutes_in_milliseconds:
             h_value += 5
 
     return h_value
@@ -177,7 +220,7 @@ def _original_performance(criteria, track):
         'original_artist' in criteria.keys() and
         track.artist == track.original_artist
     ):
-        h_value += 5
+        h_value -= 5
 
     return h_value
 
@@ -191,22 +234,17 @@ def _matches_user_criteria(criteria, track):
     return h_value
 
 
-def _get_related_tracks_from_link_nodes(link_nodes):
+def _get_related_tracks(current_track):
     related_tracks = []
-
-    for key in link_nodes.keys():
-        related_tracks.extend(getattr(link_nodes[key], key).all())
-
-    return related_tracks
-
-
-def _get_link_nodes(current_track):
-    link_nodes = {}
 
     for rel in ATTR_TO_REL.values():
         try:
-            link_nodes[rel] = getattr(current_track, rel).all()[0]
+            link_node = getattr(current_track, rel).all()[0]
         except IndexError:
             logger.debug(f'Missing key: {rel}')
+        else:
+            related_tracks.extend(getattr(link_node, rel).all())
 
-    return link_nodes
+    related_tracks
+
+    return related_tracks

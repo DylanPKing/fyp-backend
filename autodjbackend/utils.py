@@ -19,6 +19,8 @@ CRITERA_TO_NODE_MODEL = {
     'keyword_in_title': models.KeywordInTitle.nodes,
 }
 
+MINUTES_TO_MILLISECONDS = 60000
+
 
 def get_criteria_to_search(track_criteria):
     criteria_to_search = {}
@@ -33,3 +35,11 @@ def get_criteria_to_search(track_criteria):
 
 def get_seed_nodes_from_criteria(criteria_to_search):
     return models.Track.nodes.filter(**criteria_to_search).all()
+
+
+def minutes_to_milliseconds(minutes):
+    return minutes * MINUTES_TO_MILLISECONDS
+
+
+def milliseconds_to_minutes(milliseconds):
+    return milliseconds / MINUTES_TO_MILLISECONDS
