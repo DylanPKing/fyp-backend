@@ -6,7 +6,7 @@ from autodjbackend import utils
 class TestUtils(unittest.TestCase):
     def test_get_criteria_to_search_valid_criteria(self):
         expected_output = {
-            'track_number': 1,
+            'position': 1,
             'year': 1990,
             'original_artist': 'Artist',
             'keyword_in_title': 'keyword',

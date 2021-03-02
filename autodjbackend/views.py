@@ -4,8 +4,7 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
 
-from autodjbackend import utils
-from autodjbackend.playlist_generator import generate, minutes_to_milliseconds
+from autodjbackend import playlist_generator, utils
 
 
 logger = logging.getLogger(__name__)
@@ -66,7 +65,9 @@ class CreatePlaylistViewSet(ViewSet):
 
         try:
             total_duration = (
-                minutes_to_milliseconds(request_data['total_duration'])
+                playlist_generator.minutes_to_milliseconds(
+                    request_data['total_duration']
+                )
             )
 
             criteria_to_search = utils.get_criteria_to_search(
@@ -79,6 +80,8 @@ class CreatePlaylistViewSet(ViewSet):
 
         seed_nodes = utils.get_seed_nodes_from_criteria(criteria_to_search)
 
-        resp_data = generate(seed_nodes, criteria_to_search, total_duration)
+        resp_data = playlist_generator.generate(
+            seed_nodes, criteria_to_search, total_duration
+        )
 
         return Response(resp_data)
