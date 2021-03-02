@@ -2,6 +2,7 @@ import logging
 import random
 
 from autodjbackend.models import Track
+from autodjbackend.track_cache import TrackCache
 from autodjbackend.utils import (
     minutes_to_milliseconds, milliseconds_to_minutes
 )
@@ -123,7 +124,7 @@ def generate(seed_nodes, criteria, total_duration):
 
 def _h_value_exists(heurstic_dict, uuid):
     try:
-        heurstic_dict[uuid] 
+        heurstic_dict[uuid]
     except KeyError:
         return False
     else:
@@ -236,6 +237,7 @@ def _matches_user_criteria(criteria, track):
 
 def _get_related_tracks(current_track):
     related_tracks = []
+    track_cache = TrackCache.get_instance()
 
     for rel in ATTR_TO_REL.values():
         try:
@@ -243,8 +245,14 @@ def _get_related_tracks(current_track):
         except IndexError:
             logger.debug(f'Missing key: {rel}')
         else:
-            related_tracks.extend(getattr(link_node, rel).all())
+            try:
+                linked_tracks = track_cache.get_tracks_from_link_node(
+                    link_node.uuid
+                )
+            except KeyError:
+                linked_tracks = getattr(link_node, rel).all()
+                track_cache.add_result_to_cache(link_node.uuid, linked_tracks)
 
-    related_tracks
+            related_tracks.extend(linked_tracks)
 
     return related_tracks

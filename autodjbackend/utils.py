@@ -6,7 +6,7 @@ from autodjbackend import models
 logger = logging.getLogger(__name__)
 
 VALID_CRITERIA = [
-    'track_number',
+    'position',
     'year',
     'original_artist',
     'keyword_in_title',
