@@ -7,7 +7,7 @@ from unittest.mock import patch
 from autodjbackend import models
 
 from rest_framework.request import HttpRequest, Request
-from rest_framework.exceptions import ParseError
+from rest_framework.exceptions import ParseError, UnsupportedMediaType
 
 
 class TestCreatePlayListViewSet(unittest.TestCase):
@@ -56,11 +56,15 @@ class TestCreatePlayListViewSet(unittest.TestCase):
                     'autodjbackend.playlist_generator.generate',
                     return_value=expected_output
                 ) as mocked_generate:
-                    response = self.view_set.create(request)
+                    with patch.object(
+                        self.view_set, '_raise_if_not_json'
+                    ) as mocked_content_type:
+                        response = self.view_set.create(request)
 
-                    mocked_get_criteria.assert_called_once()
-                    mocked_get_link_nodes.assert_called_once()
-                    mocked_generate.assert_called_once()
+                        mocked_get_criteria.assert_called_once()
+                        mocked_get_link_nodes.assert_called_once()
+                        mocked_generate.assert_called_once()
+                        mocked_content_type.assert_called_once()
 
         actual_output = response.data
 
@@ -69,8 +73,13 @@ class TestCreatePlayListViewSet(unittest.TestCase):
     def test_create_empty(self):
         request = Request(HttpRequest())
 
-        with self.assertRaises(ParseError):
-            self.view_set.create(request)
+        with patch.object(
+            self.view_set, '_raise_if_not_json'
+        ) as mocked_content_type:
+            with self.assertRaises(ParseError):
+                self.view_set.create(request)
+
+        mocked_content_type.assert_called_once()
 
     def test_create_invalid_data(self):
         request_data = {
@@ -80,5 +89,24 @@ class TestCreatePlayListViewSet(unittest.TestCase):
         request = Request(HttpRequest())
         request.data.update(request_data)
 
-        with self.assertRaises(ParseError):
+        with patch.object(
+            self.view_set, '_raise_if_not_json'
+        ) as mocked_content_type:
+            with self.assertRaises(ParseError):
+                self.view_set.create(request)
+
+        mocked_content_type.assert_called_once()
+
+    def test_create_not_json_data(self):
+        request_data = {
+            'track_criteria': {
+                'original_artist': 'artist',
+            },
+            'total_duration': 4
+        }
+
+        request = Request(HttpRequest())
+        request.data.update(request_data)
+
+        with self.assertRaises(UnsupportedMediaType):
             self.view_set.create(request)

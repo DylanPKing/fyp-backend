@@ -2,7 +2,7 @@ import logging
 
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
-from rest_framework.exceptions import ParseError
+from rest_framework.exceptions import ParseError, UnsupportedMediaType
 
 from autodjbackend import playlist_generator, utils
 
@@ -60,6 +60,7 @@ class CreatePlaylistViewSet(ViewSet):
                     --data '{"criteria":{"original_artist":"Bob Dylan"},"total_duration":3600}' \  # noqa: E501, W605
                     /api/generate/
         """
+        self._raise_if_not_json(request.content_type)
 
         request_data = request.data
 
@@ -85,3 +86,7 @@ class CreatePlaylistViewSet(ViewSet):
         )
 
         return Response(resp_data)
+
+    def _raise_if_not_json(self, content_type):
+        if content_type != 'application/json':
+            raise UnsupportedMediaType(content_type)
