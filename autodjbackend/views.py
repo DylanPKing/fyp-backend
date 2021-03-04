@@ -75,7 +75,7 @@ class CreatePlaylistViewSet(ViewSet):
             )
         except KeyError as err:
             err_string = f'Request missing data: {err}'
-            logger.info(err_string)
+            logger.debug(err_string)
             raise ParseError(detail=err_string)
 
         seed_nodes = utils.get_seed_nodes_from_criteria(criteria_to_search)

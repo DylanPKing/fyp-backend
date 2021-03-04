@@ -28,7 +28,7 @@ def get_criteria_to_search(track_criteria):
         try:
             criteria_to_search[criteria] = track_criteria[criteria]
         except KeyError:
-            logger.info(f'Criteria not sent by client: {criteria}.')
+            logger.debug(f'Criteria not sent by client: {criteria}.')
 
     return criteria_to_search
 

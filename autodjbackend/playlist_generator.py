@@ -92,10 +92,13 @@ def generate(seed_nodes, criteria, total_duration):
         # Main loop
         logger.info('Calculating heuristic values.')
         for track in related_tracks:
-            if not _h_value_exists(heuristic_dict, track.uuid):
+            if (
+                not _h_value_exists(heuristic_dict, track.uuid) and
+                track not in playlist
+            ):
                 heuristic_dict[track.uuid] = _calculate_heuristic_value(
-                    criteria, current_track, playlist,
-                    track, total_duration, current_total
+                    criteria, current_track, track,
+                    total_duration, current_total
                 )
 
         # Bucket tracks accoriding to H-Value
@@ -162,16 +165,15 @@ def _bucket_tracks_by_h_value(heuristic_dict):
 
 
 def _calculate_heuristic_value(
-    criteria, current_track, playlist, track, total_duration, current_total
+    criteria, current_track, track, total_duration, current_total
 ):
     h_value = 0
 
-    if track not in playlist:
-        h_value += _matches_user_criteria(criteria, track)
-        h_value += _original_performance(criteria, track)
-        h_value += _matches_current_track(current_track, track)
-        h_value += _contains_keywords(current_track, track)
-        h_value += _check_remaining_time(track, total_duration, current_total)
+    h_value += _matches_user_criteria(criteria, track)
+    h_value += _original_performance(criteria, track)
+    h_value += _matches_current_track(current_track, track)
+    h_value += _contains_keywords(current_track, track)
+    h_value += _check_remaining_time(track, total_duration, current_total)
 
     return h_value
 
