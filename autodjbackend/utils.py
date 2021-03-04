@@ -6,7 +6,7 @@ from autodjbackend import models
 logger = logging.getLogger(__name__)
 
 VALID_CRITERIA = [
-    'track_number',
+    'position',
     'year',
     'original_artist',
     'keyword_in_title',
@@ -19,6 +19,8 @@ CRITERA_TO_NODE_MODEL = {
     'keyword_in_title': models.KeywordInTitle.nodes,
 }
 
+MINUTES_TO_MILLISECONDS = 60000
+
 
 def get_criteria_to_search(track_criteria):
     criteria_to_search = {}
@@ -26,17 +28,18 @@ def get_criteria_to_search(track_criteria):
         try:
             criteria_to_search[criteria] = track_criteria[criteria]
         except KeyError:
-            logger.info(f'Criteria not sent by client: {criteria}.')
+            logger.debug(f'Criteria not sent by client: {criteria}.')
 
     return criteria_to_search
 
 
-def get_link_nodes_from_criteria(criteria_to_search):
-    link_nodes = []
-    for key, value in criteria_to_search.items():
-        link_node_class = CRITERA_TO_NODE_MODEL[key]
-        params = {key: value}
-        link_node = link_node_class.filter(**params)
-        link_nodes.append(link_node)
+def get_seed_nodes_from_criteria(criteria_to_search):
+    return models.Track.nodes.filter(**criteria_to_search).all()
 
-    return link_nodes
+
+def minutes_to_milliseconds(minutes):
+    return minutes * MINUTES_TO_MILLISECONDS
+
+
+def milliseconds_to_minutes(milliseconds):
+    return milliseconds / MINUTES_TO_MILLISECONDS

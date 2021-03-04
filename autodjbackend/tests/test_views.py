@@ -49,14 +49,12 @@ class TestCreatePlayListViewSet(unittest.TestCase):
             return_value=request_data['track_criteria']
         ) as mocked_get_criteria:
             with patch(
-                'autodjbackend.utils.get_link_nodes_from_criteria',
-                return_value=[
-                    models.SameOriginalArtist(original_artist='artist')
-                ]
+                'autodjbackend.utils.get_seed_nodes_from_criteria',
+                return_value=expected_tracks
             ) as mocked_get_link_nodes:
                 with patch(
                     'autodjbackend.playlist_generator.generate',
-                    return_value=expected_tracks
+                    return_value=expected_output
                 ) as mocked_generate:
                     response = self.view_set.create(request)
 

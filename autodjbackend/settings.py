@@ -155,13 +155,13 @@ LOGGING = {
             'style': '{',
         },
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
     },
     'handlers': {
         'file': {
-            'level': 'WARNING',
+            'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': '../output.log',
             'formatter': 'verbose'
@@ -175,8 +175,12 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['file', 'console'],
-            'level': 'WARNING',
-            'propagate': True,
+            'level': 'INFO',
+            'propagate': False,
         },
+    },
+    'root': {
+        'handlers': ['file', 'console'],
+        'level': 'INFO',
     },
 }

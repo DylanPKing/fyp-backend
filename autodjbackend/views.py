@@ -9,8 +9,6 @@ from autodjbackend import playlist_generator, utils
 
 logger = logging.getLogger(__name__)
 
-MINUTES_TO_MILLISECONDS = 60000
-
 
 class CreatePlaylistViewSet(ViewSet):
 
@@ -36,7 +34,7 @@ class CreatePlaylistViewSet(ViewSet):
             Data:
                 {
                     track_criteria : {
-                        track_number : [integer],
+                        position : [integer],
                         year : [integer],
                         original_artist : [string],
                         keyword_in_title : [string]
@@ -67,7 +65,9 @@ class CreatePlaylistViewSet(ViewSet):
 
         try:
             total_duration = (
-                request_data['total_duration'] * MINUTES_TO_MILLISECONDS
+                playlist_generator.minutes_to_milliseconds(
+                    request_data['total_duration']
+                )
             )
 
             criteria_to_search = utils.get_criteria_to_search(
@@ -75,20 +75,13 @@ class CreatePlaylistViewSet(ViewSet):
             )
         except KeyError as err:
             err_string = f'Request missing data: {err}'
-            logger.info(err_string)
+            logger.debug(err_string)
             raise ParseError(detail=err_string)
 
-        link_nodes = utils.get_link_nodes_from_criteria(criteria_to_search)
+        seed_nodes = utils.get_seed_nodes_from_criteria(criteria_to_search)
 
-        playlist = playlist_generator.generate(link_nodes, total_duration)
-
-        resp_data = {
-            'tracks': [],
-            'total_duration': 0,
-        }
-
-        for track in playlist:
-            resp_data['tracks'].append(track.serialize)
-            resp_data['total_duration'] += track.duration
+        resp_data = playlist_generator.generate(
+            seed_nodes, criteria_to_search, total_duration
+        )
 
         return Response(resp_data)
