@@ -39,7 +39,12 @@ class CreatePlaylistViewSet(ViewSet):
                         original_artist : [string],
                         keyword_in_title : [string]
                     },
-                    total_duration : [integer]
+                    tracks_to_include : [[
+                        title : [string],
+                        artist : [string]
+                    ]]
+                    total_duration : [integer],
+                    tolerance_window : [integer]
                 }
             Successful Repsonse:
                 Code: 200
@@ -79,10 +84,27 @@ class CreatePlaylistViewSet(ViewSet):
             logger.debug(err_string)
             raise ParseError(detail=err_string)
 
-        seed_nodes = utils.get_seed_nodes_from_criteria(criteria_to_search)
+        user_time_window = request_data.get('tolerance_window', 1)
+
+        try:
+            user_tracks_list = request_data['tracks_to_include']
+        except KeyError:
+            logger.info('No user-specified tracks.')
+            seed_nodes = utils.get_seed_nodes_from_criteria(criteria_to_search)
+            user_tracks = None
+        else:
+            user_tracks = [
+                utils.get_seed_nodes_from_criteria(track)
+                for track in user_tracks_list
+            ]
+            user_tracks = [
+                track[0] for track in user_tracks if track != []
+            ]
+            seed_nodes = None
 
         resp_data = playlist_generator.generate(
-            seed_nodes, criteria_to_search, total_duration
+            seed_nodes, criteria_to_search, total_duration,
+            user_tracks, user_time_window
         )
 
         return Response(resp_data)
