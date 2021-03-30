@@ -3,6 +3,7 @@ from unittest import mock
 
 from autodjbackend import playlist_generator
 from autodjbackend.models import Track
+from autodjbackend.utils import minutes_to_milliseconds
 
 
 class TestPlaylistGenerator(unittest.TestCase):
@@ -34,7 +35,7 @@ class TestPlaylistGenerator(unittest.TestCase):
         current_duration = 0
 
         actual_value = playlist_generator._is_time_remaining(
-            total_duration, current_duration
+            total_duration, current_duration, minutes_to_milliseconds(0.5)
         )
 
         assert expected_value == actual_value
@@ -46,7 +47,7 @@ class TestPlaylistGenerator(unittest.TestCase):
         current_duration = 90000
 
         actual_value = playlist_generator._is_time_remaining(
-            total_duration, current_duration
+            total_duration, current_duration, minutes_to_milliseconds(0.5)
         )
 
         assert expected_value == actual_value

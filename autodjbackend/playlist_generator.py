@@ -44,7 +44,9 @@ ATTR_TO_REL = {
 }
 
 
-def generate(seed_nodes, criteria, total_duration):
+def generate(
+    seed_nodes, criteria, total_duration, user_tracks, user_time_window=1
+):
     """
     Generates a playlist using user criteria, and the given seed nodes.
 
@@ -74,7 +76,20 @@ def generate(seed_nodes, criteria, total_duration):
             in minutes.
     """
     heuristic_dict = {}
-    current_track = random.choice(seed_nodes)
+
+    time_window = minutes_to_milliseconds(user_time_window)
+
+    just_added_user_track = False
+    if user_tracks:
+        current_track = user_tracks[0]
+        user_tracks.remove(user_tracks[0])
+        user_track_interval = (
+            total_duration / len(user_tracks)
+        )
+        just_added_user_track = True
+    else:
+        current_track = random.choice(seed_nodes)
+
     current_total = current_track.duration
     playlist = [current_track]
     logger.info(
@@ -85,26 +100,46 @@ def generate(seed_nodes, criteria, total_duration):
         # Clear existing heuristic values
         heuristic_dict.clear()
 
-        # Get link nodes which connect to all related tracks.
-        logger.info('Getting related tracks.')
-        related_tracks = _get_related_tracks(current_track)
-
-        # Main loop
-        logger.info('Calculating heuristic values.')
-        for track in related_tracks:
-            if (
-                not _h_value_exists(heuristic_dict, track.uuid) and
-                track not in playlist
-            ):
-                heuristic_dict[track.uuid] = _calculate_heuristic_value(
-                    criteria, current_track, track,
-                    total_duration, current_total
+        if (
+            user_tracks and (
+                (
+                    _in_user_track_interval(
+                        user_track_interval, current_total,
+                        just_added_user_track
+                    )
+                ) or (
+                    not _is_time_remaining(
+                        total_duration, current_total, user_tracks[0].duration
+                    )
                 )
+            )
+        ):
+            logger.info('Using user requested track.')
+            next_track = user_tracks[0]
+            user_tracks.remove(next_track)
+            just_added_user_track = True
+        else:
+            just_added_user_track = False
+            # Get link nodes which connect to all related tracks.
+            logger.info('Getting related tracks.')
+            related_tracks = _get_related_tracks(current_track)
 
-        # Bucket tracks accoriding to H-Value
-        h_buckets = _bucket_tracks_by_h_value(heuristic_dict)
+            # Main loop
+            logger.info('Calculating heuristic values.')
+            for track in related_tracks:
+                if (
+                    not _h_value_exists(heuristic_dict, track.uuid) and
+                    track not in playlist
+                ):
+                    heuristic_dict[track.uuid] = _calculate_heuristic_value(
+                        criteria, current_track, track,
+                        total_duration, current_total
+                    )
 
-        next_track = _get_next_track(h_buckets)
+            # Bucket tracks accoriding to H-Value
+            h_buckets = _bucket_tracks_by_h_value(heuristic_dict)
+
+            next_track = _get_next_track(h_buckets)
 
         playlist.append(next_track)
         current_total += next_track.duration
@@ -115,7 +150,9 @@ def generate(seed_nodes, criteria, total_duration):
             f'Current runtime: {milliseconds_to_minutes(current_total)}'
         )
 
-        time_left = _is_time_remaining(total_duration, current_total)
+        time_left = _is_time_remaining(
+            total_duration, current_total, time_window
+        )
 
     response = {
         'tracks': [track.serialize for track in playlist],
@@ -123,6 +160,15 @@ def generate(seed_nodes, criteria, total_duration):
     }
 
     return response
+
+
+def _in_user_track_interval(
+    user_track_interval, current_total, just_added_user_track
+):
+    return (
+        current_total % user_track_interval < minutes_to_milliseconds(5) and
+        not just_added_user_track
+    )
 
 
 def _h_value_exists(heurstic_dict, uuid):
@@ -134,10 +180,10 @@ def _h_value_exists(heurstic_dict, uuid):
         return True
 
 
-def _is_time_remaining(total_duration, current_total):
+def _is_time_remaining(total_duration, current_total, time_window):
     time_left = True
     time_remaining = total_duration - current_total
-    if time_remaining < minutes_to_milliseconds(0.5):
+    if time_remaining < time_window:
         time_left = False
 
     return time_left
